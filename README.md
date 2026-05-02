@@ -5,7 +5,7 @@
 spinnaker/
 ├── backend/
 │   ├── main.py                          ← FastAPI backend (provided)
-│   └── Spinnakeri_üürimudel_v3.xlsx     ← Your Excel model (place here)
+│   └── Spinnaker.xlsx     ← Your Excel model (place here)
 ├── frontend/
 │   └── index.html                       ← UI (open in browser or serve)
 ├── scripts/
