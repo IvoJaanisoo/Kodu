@@ -161,44 +161,43 @@ def get_defaults():
 @app.post("/calculate")
 def calculate(inputs: ModelInputs):
     """
-    Write inputs to green cells only, trigger recalculation,
-    read outputs. Excel model is not modified — a temp copy is used.
+    Write inputs to green cells only.
+    Temporary mode: no LibreOffice recalculation; reads last saved Excel values.
     """
     if not EXCEL_TEMPLATE.exists():
-        raise HTTPException(404, "Excel template not found. Place model at backend/Spinnaker.xlsx")
+        raise HTTPException(404, "Excel template not found.")
 
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
         tmp_path = tmp.name
 
-try:
-    shutil.copy2(EXCEL_TEMPLATE, tmp_path)
-    wb = load_workbook(tmp_path)
-    ws = wb[SHEET]
+    try:
+        shutil.copy2(EXCEL_TEMPLATE, tmp_path)
 
-    # Write inputs
-    input_values = inputs.model_dump()
-    for field, cell_addr in INPUT_CELLS.items():
-        if field in input_values:
-            ws[cell_addr] = input_values[field]
+        wb = load_workbook(tmp_path)
+        ws = wb[SHEET]
 
-    wb.save(tmp_path)
-    wb.close()
+        input_values = inputs.model_dump()
+        for field, cell_addr in INPUT_CELLS.items():
+            if field in input_values:
+                ws[cell_addr] = input_values[field]
 
-    # READ WITHOUT RECALC (temporary)
-    wb = load_workbook(tmp_path, data_only=True)
-    ws = wb[SHEET]
+        wb.save(tmp_path)
+        wb.close()
 
-    outputs = {}
-    for field, cell in OUTPUT_CELLS.items():
-        val = ws[cell].value
-        outputs[field] = float(val) if val is not None else None
+        wb = load_workbook(tmp_path, data_only=True)
+        ws = wb[SHEET]
 
-    wb.close()
+        outputs = {}
+        for field, cell in OUTPUT_CELLS.items():
+            val = ws[cell].value
+            outputs[field] = float(val) if val is not None else None
 
-    return {"inputs": input_values, "outputs": outputs}
+        wb.close()
 
-finally:
-    os.unlink(tmp_path)
+        return {"inputs": input_values, "outputs": outputs}
+
+    finally:
+        os.unlink(tmp_path)
 
 
 @app.get("/health")
