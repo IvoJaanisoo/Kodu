@@ -13,8 +13,15 @@ from openpyxl import load_workbook
 app = FastAPI(title="Spinnaker Rental Model API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    with open("frontend_index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 # ─── SINGLE SOURCE OF TRUTH: Excel file path ───────────────────────────────────
-EXCEL_TEMPLATE = Path(__file__).parent / "Spinnakeri_uürimudel_v3.xlsx"
+EXCEL_TEMPLATE = Path(__file__).parent / "Spinnaker.xlsx"
 SHEET = "Spinnakeri mudel"
 
 # ─── INPUT CELL MAP  (UI field → Excel cell address) ──────────────────────────
@@ -158,7 +165,7 @@ def calculate(inputs: ModelInputs):
     read outputs. Excel model is not modified — a temp copy is used.
     """
     if not EXCEL_TEMPLATE.exists():
-        raise HTTPException(404, "Excel template not found. Place model at backend/Spinnakeri_uürimudel_v3.xlsx")
+        raise HTTPException(404, "Excel template not found. Place model at backend/Spinnaker.xlsx")
 
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
         tmp_path = tmp.name
