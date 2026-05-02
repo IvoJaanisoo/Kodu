@@ -170,33 +170,35 @@ def calculate(inputs: ModelInputs):
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
         tmp_path = tmp.name
 
-    try:
-        shutil.copy2(EXCEL_TEMPLATE, tmp_path)
-        wb = load_workbook(tmp_path)
-        ws = wb[SHEET]
+try:
+    shutil.copy2(EXCEL_TEMPLATE, tmp_path)
+    wb = load_workbook(tmp_path)
+    ws = wb[SHEET]
 
-        # Write ONLY green input cells
-        input_values = inputs.model_dump()
-        for field, cell_addr in INPUT_CELLS.items():
-            if field in input_values:
-                ws[cell_addr] = input_values[field]
+    # Write inputs
+    input_values = inputs.model_dump()
+    for field, cell_addr in INPUT_CELLS.items():
+        if field in input_values:
+            ws[cell_addr] = input_values[field]
 
-        wb.save(tmp_path)
-        wb.close()
+    wb.save(tmp_path)
+    wb.close()
 
-wb = load_workbook(tmp_path, data_only=True)
-ws = wb[SHEET]
+    # READ WITHOUT RECALC (temporary)
+    wb = load_workbook(tmp_path, data_only=True)
+    ws = wb[SHEET]
 
-outputs = {}
-for field, cell in OUTPUT_CELLS.items():
-    val = ws[cell].value
-    outputs[field] = float(val) if val is not None else None
+    outputs = {}
+    for field, cell in OUTPUT_CELLS.items():
+        val = ws[cell].value
+        outputs[field] = float(val) if val is not None else None
 
-wb.close()
-        return {"inputs": input_values, "outputs": outputs}
+    wb.close()
 
-    finally:
-        os.unlink(tmp_path)
+    return {"inputs": input_values, "outputs": outputs}
+
+finally:
+    os.unlink(tmp_path)
 
 
 @app.get("/health")
