@@ -1,7 +1,7 @@
 # Spinnaker Rental Model — System Architecture
 
 ## Principle
-The Excel workbook `Spinnakeri_üürimudel_v3.xlsx` is the **single source of truth** for all calculations.
+The Excel workbook `Spinnaker.xlsx` is the **single source of truth** for all calculations.
 The system adds a UI layer and API wrapper around it. No formulas are reimplemented outside Excel.
 
 ---
@@ -106,7 +106,7 @@ The system adds a UI layer and API wrapper around it. No formulas are reimplemen
 ### Deployment
 ```bash
 pip install fastapi uvicorn openpyxl
-# Place Excel model at: backend/Spinnakeri_üürimudel_v3.xlsx
+# Place Excel model at: backend/Spinnaker.xlsx
 uvicorn backend.main:app --reload --port 8000
 ```
 
