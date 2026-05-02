@@ -184,7 +184,15 @@ def calculate(inputs: ModelInputs):
         wb.save(tmp_path)
         wb.close()
 
-        outputs = recalculate_excel(tmp_path)
+wb = load_workbook(tmp_path, data_only=True)
+ws = wb[SHEET]
+
+outputs = {}
+for field, cell in OUTPUT_CELLS.items():
+    val = ws[cell].value
+    outputs[field] = float(val) if val is not None else None
+
+wb.close()
         return {"inputs": input_values, "outputs": outputs}
 
     finally:
