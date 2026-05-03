@@ -1,6 +1,2 @@
-fastapi
-uvicorn
-openpyxl
-pandas
-numpy
-python-multipart
+# No external dependencies — pure Python stdlib only
+# This file exists so Render recognises it as a Python project
