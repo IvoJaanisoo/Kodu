@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinnaker — Üürikinnisvara Kalkulaator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+/* ── DESIGN SYSTEM ─────────────────────────────────────────────────────────── */
+:root {
+  --bg:        #F4F2EE;
+  --surface:   #FFFFFF;
+  --surface2:  #EEF0F2;
+  --border:    #D8D5CE;
+  --border2:   #C4BFB5;
+  --text:      #1A1A18;
+  --text2:     #5C5B56;
+  --text3:     #9B9891;
+  --green:     #1A7A54;
+  --green-l:   #E8F5EE;
+  --green-b:   #B8DFCC;
+  --amber:     #9B6D12;
+  --amber-l:   #FDF3DC;
+  --red:       #C13030;
+  --red-l:     #FDE8E8;
+  --blue:      #1E5FA8;
+  --blue-l:    #E6F0FB;
+  --mono:      'DM Mono', monospace;
+  --display:   'Syne', sans-serif;
+  --body:      'Lato', sans-serif;
+  --r:         6px;
+  --r2:        10px;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+
+/* ── HEADER ─────────────────────────────────────────────────────────────────── */
+.header {
+  background: var(--text);
+  color: #fff;
+  padding: 0 2rem;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 200;
+}
+.logo {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: #fff;
+}
+.logo em { color: #4ADE80; font-style: normal; }
+.header-nav { display: flex; gap: 2px; }
+.hnav {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  transition: all .2s;
+}
+.hnav:hover { color: rgba(255,255,255,.85); }
+.hnav.on { background: rgba(255,255,255,.12); color: #fff; }
+.api-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: rgba(255,255,255,.4);
+  font-family: var(--mono);
+}
+.api-dot { width: 6px; height: 6px; border-radius: 50%; background: #6B7280; }
+.api-dot.ok { background: #4ADE80; }
+.api-dot.err { background: #F87171; }
+
+/* ── LAYOUT ─────────────────────────────────────────────────────────────────── */
+.pg { display: none; }
+.pg.on { display: block; }
+.container { max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
+
+/* ── CALCULATOR PAGE ─────────────────────────────────────────────────────────── */
+.calc-layout {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 54px);
+}
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  position: sticky;
+  top: 54px;
+  height: calc(100vh - 54px);
+  overflow-y: auto;
+}
+.results-panel { padding: 1.5rem; }
+
+/* Sidebar sections */
+.sg { margin-bottom: 1.5rem; }
+.sg-title {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+}
+.field { margin-bottom: 12px; }
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  gap: 6px;
+}
+.field-label { font-size: 12px; color: var(--text2); flex: 1; min-width: 0; line-height: 1.3; }
+.field-cell {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.field-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--green);
+  min-width: 46px;
+  text-align: right;
+  font-weight: 500;
+}
+.field-val.blue { color: var(--blue); }
+.field-val.out { color: var(--text); font-weight: 600; }
+input[type=range] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--green);
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+
+/* EIS toggle */
+.eis-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+.eis-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.eis-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+.eis-badge {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--green);
+  color: #fff;
+  display: none;
+}
+.eis-badge.on { display: inline; }
+.eis-hint { font-size: 10px; color: var(--text3); line-height: 1.4; }
+input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--green); cursor: pointer; }
+
+/* Mode buttons */
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+.mode-btn {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: 7px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.mode-btn.on {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
+}
+
+/* IRR solver panel */
+.irr-solver {
+  background: var(--blue-l);
+  border: 1px solid #C3D9F5;
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.irr-solver .sg-title { color: var(--blue); border-color: #C3D9F5; }
+.irr-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #C3D9F5;
+  font-size: 12px;
+}
+.irr-result-row:last-child { border: none; }
+.irr-result-row .r-label { color: var(--text2); }
+.irr-result-row .r-val {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+}
+.bisection-note {
+  font-size: 9px;
+  color: var(--blue);
+  opacity: .7;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ── KPI CARDS ──────────────────────────────────────────────────────────────── */
+.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.kpi.primary { border-top: 3px solid var(--green); }
+.kpi.primary-blue { border-top: 3px solid var(--blue); }
+.kpi-ref {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--border2);
+}
+.kpi-label {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.kpi-value.good { color: var(--green); }
+.kpi-value.ok { color: var(--amber); }
+.kpi-value.bad { color: var(--red); }
+.kpi-value.blue { color: var(--blue); }
+.kpi-sub { font-size: 10px; color: var(--text3); }
+
+/* ── CHART CARDS ─────────────────────────────────────────────────────────────── */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+
+/* Stacked bar */
+.stack-bar {
+  height: 28px;
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+.stack-seg { height: 100%; transition: width .35s ease; }
+.stack-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.stack-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text2); }
+.stack-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* Cost table */
+.cost-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cost-tbl tr { border-bottom: 1px solid var(--border); }
+.cost-tbl tr:last-child { border: none; }
+.cost-tbl td { padding: 5px 0; color: var(--text2); }
+.cost-tbl .c-val { text-align: right; font-family: var(--mono); color: var(--text); font-size: 12px; }
+.cost-tbl .c-ref { font-family: var(--mono); font-size: 9px; color: var(--text3); padding: 0 6px; }
+.cost-tbl .c-pos { color: var(--green); }
+.cost-tbl tr.total td { font-weight: 600; color: var(--text); border-top: 1px solid var(--border2); padding-top: 8px; }
+
+/* Scenarios */
+.scen-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.scen-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+.scen-card.highlight { border-color: var(--green); background: var(--green-l); }
+.scen-name { font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.scen-desc { font-size: 10px; color: var(--text3); margin-bottom: 10px; }
+.scen-kv-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+.scen-kv-row:last-child { border: none; }
+.scen-kv-l { color: var(--text2); }
+.scen-kv-v { font-family: var(--mono); color: var(--text); font-weight: 500; }
+
+/* ── INTEREST BOARD ──────────────────────────────────────────────────────────── */
+.ib-page { padding: 2rem; max-width: 1280px; margin: 0 auto; }
+.ib-hero {
+  background: var(--text);
+  color: #fff;
+  border-radius: var(--r2);
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.ib-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(74,222,128,.06);
+}
+.ib-hero-title {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -.01em;
+}
+.ib-hero-title em { color: #4ADE80; font-style: normal; }
+.ib-hero-sub { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.6; max-width: 600px; }
+.ib-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.ib-stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px 16px; box-shadow: var(--shadow); text-align: center; }
+.ib-stat-n { font-family: var(--mono); font-size: 24px; font-weight: 500; color: var(--text); }
+.ib-stat-l { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.threshold-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 16px 20px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.threshold-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.threshold-head-l { font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--text); }
+.threshold-pct { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--green); }
+.threshold-track { height: 12px; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.threshold-fill { height: 100%; border-radius: 6px; background: var(--green); transition: width .6s ease; }
+.threshold-fill.near { background: var(--amber); }
+.threshold-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 5px; }
+.ib-body { display: grid; grid-template-columns: 420px 1fr; gap: 20px; }
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px 22px; box-shadow: var(--shadow); }
+.form-card-title { font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; letter-spacing: .02em; }
+.form-input {
+  width: 100%;
+  padding: 9px 11px;
+  font-size: 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--body);
+  transition: border-color .15s;
+}
+.form-input:focus { outline: none; border-color: var(--green); background: #fff; }
+.type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.type-btn {
+  padding: 8px 6px;
+  font-size: 11px;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: .04em;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.type-btn.on.dev { background: var(--green-l); color: var(--green); border-color: var(--green-b); }
+.type-btn.on.kov { background: var(--amber-l); color: var(--amber); border-color: #F5D98A; }
+.type-btn.on.emp { background: var(--blue-l); color: var(--blue); border-color: #C3D9F5; }
+.submit-btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--text);
+  color: #fff;
+  border: none;
+  border-radius: var(--r);
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background .2s;
+}
+.submit-btn:hover { background: var(--green); }
+.toast {
+  display: none;
+  background: var(--green-l);
+  border: 1px solid var(--green-b);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.toast.on { display: block; }
+.list-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 16px 18px; box-shadow: var(--shadow); }
+.list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.list-title { font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--text); }
+.list-count { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.list-scroll { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.reg-item { padding: 10px 12px; background: var(--surface2); border-radius: var(--r); border: 1px solid var(--border); }
+.reg-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.reg-badge {
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.reg-badge.dev { background: var(--green-l); color: var(--green); }
+.reg-badge.kov { background: var(--amber-l); color: var(--amber); }
+.reg-badge.emp { background: var(--blue-l); color: var(--blue); }
+.reg-badge.demo { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+.reg-region { font-size: 12px; font-weight: 600; color: var(--text); margin-left: 8px; }
+.reg-date { font-size: 10px; color: var(--text3); }
+.reg-detail { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+.reg-note { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* ── MAP PAGE ────────────────────────────────────────────────────────────────── */
+.map-page { padding: 2rem; max-width: 1280px; margin: 0 auto; }
+.map-header { margin-bottom: 14px; }
+.map-header-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.map-header-sub { font-size: 12px; color: var(--text2); }
+.map-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; font-size: 11px; color: var(--text2); }
+.map-legend span { display: flex; align-items: center; gap: 6px; }
+.ml-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.map-svg-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+svg#emap { width: 100%; display: block; }
+.map-totals {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  margin-top: 12px; font-size: 12px; color: var(--text2);
+}
+.map-totals strong { color: var(--text); font-family: var(--mono); font-weight: 600; }
+
+/* ── UTILITIES ───────────────────────────────────────────────────────────────── */
+.good { color: var(--green); }
+.ok   { color: var(--amber); }
+.bad  { color: var(--red); }
+
+/* ── MIKS? PAGE ─────────────────────────────────────────────────────────────── */
+.miks-layout { max-width: 1000px; margin: 0 auto; padding: 40px 24px 60px; }
+.miks-hero { text-align: center; padding: 60px 20px 48px; }
+.miks-hero-label { font-family: var(--display); font-size: 11px; font-weight: 700;
+  letter-spacing: .15em; color: var(--green); margin-bottom: 16px; }
+.miks-hero-title { font-family: var(--display); font-size: clamp(28px,5vw,52px);
+  font-weight: 800; line-height: 1.12; color: var(--text); margin: 0 0 16px; }
+.miks-hero-sub { font-size: 16px; color: var(--text2); max-width: 500px; margin: 0 auto; }
+.miks-cards { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 48px; }
+@media(min-width:700px){ .miks-cards { grid-template-columns: 1fr 1fr; } }
+@media(min-width:1000px){ .miks-cards { grid-template-columns: 1fr 1fr 1fr; } }
+.miks-card { background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px 24px; position: relative; overflow: hidden; }
+.miks-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: linear-gradient(90deg, var(--green), var(--amber)); }
+.miks-card-num { font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: var(--text3); letter-spacing:.1em; margin-bottom: 10px; }
+.miks-card-icon { font-size: 28px; margin-bottom: 12px; }
+.miks-card-title { font-family: var(--display); font-size: 17px; font-weight: 700;
+  color: var(--text); margin: 0 0 14px; line-height: 1.3; }
+.miks-card-body { font-size: 13px; color: var(--text2); line-height: 1.6;
+  margin: 0 0 12px; }
+.miks-stat-row { display: flex; gap: 12px; margin-top: 16px; }
+.miks-stat { flex: 1; background: var(--surface2); border-radius: 8px;
+  padding: 10px 8px; text-align: center; }
+.miks-stat-n { display: block; font-family: var(--mono); font-size: 18px;
+  font-weight: 700; color: var(--green); }
+.miks-stat-l { display: block; font-size: 9px; color: var(--text3);
+  margin-top: 2px; text-transform: uppercase; letter-spacing: .06em; }
+.miks-compare { display: flex; gap: 8px; margin-top: 16px; }
+.miks-compare-col { flex: 1; border-radius: 8px; padding: 10px; font-size: 11px; }
+.miks-compare-col.bad { background: var(--red-l); border: 1px solid var(--red); }
+.miks-compare-col.good { background: var(--green-l); border: 1px solid var(--green); }
+.miks-compare-head { font-weight: 700; font-size: 11px; margin-bottom: 6px;
+  color: var(--text); }
+.miks-compare-item { color: var(--text2); padding: 2px 0; line-height: 1.4; }
+.miks-cta-row { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+.miks-cta { background: var(--green); color: #fff; border: none; border-radius: 8px;
+  padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--body); transition: opacity .15s; }
+.miks-cta:hover { opacity: .85; }
+.miks-cta.secondary { background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); }
+.miks-footer { text-align: center; font-size: 11px; color: var(--text3);
+  padding-top: 24px; border-top: 1px solid var(--border); }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">SPINNAKER<em>.</em></div>
+  <nav class="header-nav">
+    <button class="hnav on" onclick="sw('calc')">Kalkulaator</button>
+    <button class="hnav" onclick="sw('ib')">Huvi register</button>
+    <button class="hnav" onclick="sw('map')">Kaart</button>
+    <button class="hnav" onclick="sw('miks')">Miks?</button>
+  </nav>
+  <div class="api-status">
+    <span class="api-dot" id="api-dot"></span>
+    <span id="api-txt">ühendub serveriga…</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!--  CALCULATOR                                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="pg on" id="pg-calc">
+ <div class="calc-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sg">
+      <div class="sg-title">EIS meetmed</div>
+      <div class="eis-card">
+        <div class="eis-row" style="margin-bottom:4px">
+          <span class="eis-label">Käendus arendusperioodil <em style="font-size:9px;color:var(--text3)">C13</em></span>
+          <input type="checkbox" id="eis-c13" onchange="onEIS()">
+        </div>
+        <p class="eis-hint" style="margin:0 0 8px">OK 20% · dev.intress −2pp · käendustasu 1.6%</p>
+        <div class="eis-row" style="margin-bottom:4px">
+          <span class="eis-label">Käendus haldusperioodil <em style="font-size:9px;color:var(--text3)">C18</em></span>
+          <input type="checkbox" id="eis-c18" onchange="onEIS()">
+        </div>
+        <p class="eis-hint" style="margin:0 0 8px">Inv.intress −1pp · käendustasu 1.6%</p>
+        <div class="eis-row" style="margin-bottom:4px">
+          <span class="eis-label"><strong>EIS kaaslaen</strong> <em style="font-size:9px;color:var(--text3)">C23</em></span>
+          <input type="checkbox" id="eis-c23" onchange="onEIS()">
+        </div>
+        <p class="eis-hint" style="margin:0">OK 10% · inv.intress −0.5pp · tagasimaks +15a</p>
+      </div>
+    </div>
+
+    <div class="sg">
+      <div class="sg-title">Arvutusrežiim</div>
+      <div class="mode-grid">
+        <button class="mode-btn on" id="m1" onclick="setMode(1)">Üür → IRR</button>
+        <button class="mode-btn"    id="m2" onclick="setMode(2)">IRR → Üür</button>
+      </div>
+
+      <div id="rent-block">
+        <div class="field">
+          <div class="field-row">
+            <span class="field-label" style="color:var(--blue);font-weight:600">Kuuüür (€/m²)</span>
+            <span class="field-cell" style="border-color:var(--blue);color:var(--blue)">D45</span>
+            <span class="field-val blue" id="v-mr">14.0</span>
+          </div>
+          <input type="range" min="5" max="25" step="0.5" value="14" id="i-mr" oninput="upd('mr','');go()">
+        </div>
+      </div>
+
+      <div id="irr-block" style="display:none">
+        <div class="irr-solver">
+          <div class="sg-title">Sihitud omakapitali IRR → üür</div>
+          <div class="field" style="margin-bottom:10px">
+            <div class="field-row">
+              <span class="field-label" style="font-weight:500">OK IRR siht</span>
+              <span class="field-val" id="v-eirr">7.4%</span>
+            </div>
+            <input type="range" min="1" max="20" step="0.1" value="7.4" id="i-eirr" oninput="updPct('eirr');go()">
+          </div>
+          <div class="irr-result-row">
+            <span class="r-label">Vajalik kuuüür</span>
+            <span class="r-val" id="rent-eirr">—</span>
+          </div>
+          <div class="irr-result-row">
+            <span class="r-label">Sellest tulenev projekti IRR</span>
+            <span class="r-val" id="rent-pirr">—</span>
+          </div>
+          <p class="bisection-note">Bisektsiooni meetod · ~80 iteratsiooni · täpsus 0.001 €/m²</p>
+          <p class="bisection-note" style="margin-top:6px;color:var(--amber)">
+            Positiivne finantsvõimendus tekib siis kui laenuintress on alla projekti IRR-i.
+            EIS vähendab intressi 4%-le → OK IRR ületab projekti IRR-i.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sg">
+      <div class="sg-title">Finantseerimisparameetrid</div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Omakapitali osakaal</span><span class="field-cell">C5</span><span class="field-val" id="v-eq">70%</span></div>
+        <input type="range" min="0.05" max="0.95" step="0.01" value="0.70" id="i-eq" oninput="upd('eq','%');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Arenduslaenu intress</span><span class="field-cell">C6</span><span class="field-val" id="v-ir">8.5%</span></div>
+        <input type="range" min="0.03" max="0.15" step="0.005" value="0.085" id="i-ir" oninput="upd('ir','%');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Investeerimislaenu intress</span><span class="field-cell">C7</span><span class="field-val" id="v-ir2">5.5%</span></div>
+        <input type="range" min="0.02" max="0.12" step="0.005" value="0.055" id="i-ir2" oninput="upd('ir2','%');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Investeerimislaenu tagasimaks (a)</span><span class="field-cell">C8</span><span class="field-val" id="v-rp">20a</span></div>
+        <input type="range" min="10" max="40" step="1" value="20" id="i-rp" oninput="upd('rp','a');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Äriplaani horisont (a)</span><span class="field-cell">C10</span><span class="field-val" id="v-pd">40a</span></div>
+        <input type="range" min="20" max="40" step="1" value="40" id="i-pd" oninput="upd('pd','a');go()">
+      </div>
+    </div>
+
+    <div class="sg">
+      <div class="sg-title">Kinnisvara &amp; ehitus</div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Korterite arv</span><span class="field-cell">D31</span><span class="field-val" id="v-na">40</span></div>
+        <input type="range" min="10" max="100" step="1" value="40" id="i-na" oninput="upd('na','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Korteri pind (m²)</span><span class="field-cell">D32</span><span class="field-val" id="v-as">51.5</span></div>
+        <input type="range" min="30" max="80" step="0.5" value="51.5" id="i-as" oninput="upd('as','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Ehituskulu korterid (€/m²)</span><span class="field-cell">D45</span><span class="field-val" id="v-bc">1700</span></div>
+        <input type="range" min="1200" max="2500" step="50" value="1700" id="i-bc" oninput="upd('bc','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Ehituskulu üldpind (€/m²)</span><span class="field-cell">D46</span><span class="field-val" id="v-ca">1300</span></div>
+        <input type="range" min="800" max="2500" step="50" value="1300" id="i-ca" oninput="upd('ca','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Ehituskulu parkimiskorrus (€/m²)</span><span class="field-cell">D47</span><span class="field-val" id="v-pk">1000</span></div>
+        <input type="range" min="0" max="2000" step="50" value="1000" id="i-pk" oninput="upd('pk','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Maa hind (€/m² kinnistu)</span><span class="field-cell">D37</span><span class="field-val" id="v-lp">20</span></div>
+        <input type="range" min="5" max="100" step="1" value="20" id="i-lp" oninput="upd('lp','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Arenduskulud kokku (€/m²)</span><span class="field-cell">D38–D42</span><span class="field-val" id="v-dc">80</span></div>
+        <input type="range" min="20" max="200" step="5" value="80" id="i-dc" oninput="upd('dc','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Korterite osakaal pinnast</span><span class="field-cell">E45</span><span class="field-val" id="v-e27">90%</span></div>
+        <input type="range" min="0.65" max="0.95" step="0.01" value="0.90" id="i-e27" oninput="upd('e27','%');go()">
+      </div>
+    </div>
+
+    <div class="sg">
+      <div class="sg-title">Käitamine &amp; üüriparameetrid</div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Vakants + makserisk</span><span class="field-cell">D60</span><span class="field-val" id="v-vr">5.0%</span></div>
+        <input type="range" min="0.01" max="0.2" step="0.005" value="0.05" id="i-vr" oninput="upd('vr','%');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Esimese aasta vakants</span><span class="field-cell">E60</span><span class="field-val" id="v-ev">50%</span></div>
+        <input type="range" min="0" max="1" step="0.05" value="0.5" id="i-ev" oninput="upd('ev','%');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Halduskulu (€/m²/a)</span><span class="field-cell">D61</span><span class="field-val" id="v-op">30</span></div>
+        <input type="range" min="10" max="90" step="1" value="30" id="i-op" oninput="upd('op','');go()">
+      </div>
+      <div class="field">
+        <div class="field-row"><span class="field-label">Üürihinna tõus aastas</span><span class="field-cell">D62</span><span class="field-val" id="v-ri">2.0%</span></div>
+        <input type="range" min="0" max="0.06" step="0.005" value="0.02" id="i-ri" oninput="upd('ri','%');go()">
+      </div>
+    </div>
+
+    <div class="sg">
+      <div class="sg-title">Exit väärtus</div>
+      <div class="field">
+        <div class="field-row">
+          <span class="field-label">Exit €/m² (0 = arvutuslik D38)</span>
+          <span class="field-cell">D39</span>
+          <span class="field-val" id="v-exit">auto</span>
+        </div>
+        <input type="number" id="i-exit" min="0" step="50" value="0" placeholder="0"
+          style="width:100%;padding:5px 8px;font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--body)"
+          oninput="updExit();go()">
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">Tühi või 0 = kasutatakse ehitushinda. Positiivne väärtus asendab exit rahavoo.</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RESULTS PANEL -->
+  <div class="results-panel">
+
+    <div class="kpi-row">
+      <div class="kpi primary">
+        <div class="kpi-ref">H23</div>
+        <div class="kpi-label">Projekti IRR</div>
+        <div class="kpi-value" id="r-irr">—</div>
+        <div class="kpi-sub">Unlevered · IRR(H13:AU13)</div>
+      </div>
+      <div class="kpi primary">
+        <div class="kpi-ref">H24</div>
+        <div class="kpi-label">Omakapitali IRR</div>
+        <div class="kpi-value" id="r-eirr">—</div>
+        <div class="kpi-sub">Levered · IRR(H19:AU19)</div>
+      </div>
+      <div class="kpi primary-blue">
+        <div class="kpi-ref">D45</div>
+        <div class="kpi-label">Kuuüür</div>
+        <div class="kpi-value blue" id="r-mr">—</div>
+        <div class="kpi-sub">€/m²/kuu</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ref">H26</div>
+        <div class="kpi-label">Max omakapital</div>
+        <div class="kpi-value" id="r-eq">—</div>
+        <div class="kpi-sub" id="r-eq2">€/m² → H22</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ref">D38</div>
+        <div class="kpi-label">Maksumus / m² KM-ga</div>
+        <div class="kpi-value" id="r-sqm">—</div>
+        <div class="kpi-sub">= exit väärtus D39</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-ref">D15</div>
+        <div class="kpi-label">Üüritav pind</div>
+        <div class="kpi-value" id="r-area">—</div>
+        <div class="kpi-sub" id="r-area2">Kogu netopind → D16</div>
+      </div>
+    </div>
+
+    <div id="dscr-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:14px;background:var(--surface)">
+      <div>
+        <span style="font-family:var(--display);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">DSCR — laenukattekordaja (aasta 5)</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:10px">NOI / laenumaksed · pangad nõuavad min 1.20x</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="r-dscr" style="font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text)">—</span>
+        <span id="r-dscr-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;display:none"></span>
+      </div>
+    </div>
+
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-title">Kuuüür → kulukatted (€/m²) · Excel L-veerg</div>
+        <div class="stack-bar" id="sbar"></div>
+        <div class="stack-legend" id="sleg"></div>
+        <div style="position:relative;height:120px"><canvas id="rc"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Projekti kulukomponendid kokku</div>
+        <table class="cost-tbl">
+          <tr><td>Arenduskulu</td><td class="c-ref">H28</td><td class="c-val" id="t-d">—</td></tr>
+          <tr><td>Käibemaks</td><td class="c-ref">H29</td><td class="c-val" id="t-v">—</td></tr>
+          <tr><td>Halduskulu (kogu periood)</td><td class="c-ref">H30</td><td class="c-val" id="t-o">—</td></tr>
+          <tr><td>Panga tootlus (intressid)</td><td class="c-ref">H31</td><td class="c-val" id="t-b">—</td></tr>
+          <tr><td>Omaniku tootlus</td><td class="c-ref">H32</td><td class="c-val" id="t-ow">—</td></tr>
+          <tr class="total"><td>Kulud kokku</td><td class="c-ref">H33</td><td class="c-val" id="t-tot">—</td></tr>
+          <tr><td class="c-pos">Üüritulu kokku</td><td class="c-ref">H34</td><td class="c-val c-pos" id="t-ri">—</td></tr>
+          <tr><td class="c-pos">Hoone müük (exit)</td><td class="c-ref">H35</td><td class="c-val c-pos" id="t-ex">—</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Stsenaariumide võrdlus</div>
+      <div class="scen-row" id="scen-row"></div>
+    </div>
+
+  </div>
+ </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!--  INTEREST BOARD                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-ib">
+ <div class="ib-page">
+  <div class="ib-hero">
+    <div class="ib-hero-title">EISi kaaslaen — <em>Huvi register</em></div>
+    <div class="ib-hero-sub">Arendajad, omavalitsused ja tööandjad registreerivad siia oma huvi Eesti regionaalsete üürikorteriprojektide vastu. Kogutud andmed tõestavad EIS-le, et on piisav ja püsiv laenunõudlus meetme käivitamiseks.</div>
+  </div>
+
+  <div class="ib-stats">
+    <div class="ib-stat"><div class="ib-stat-n" id="s-loan">€0</div><div class="ib-stat-l">Laenuvajadus kokku</div></div>
+    <div class="ib-stat"><div class="ib-stat-n" id="s-cnt">0</div><div class="ib-stat-l">Registreeritud osapooli</div></div>
+    <div class="ib-stat"><div class="ib-stat-n" id="s-units">0</div><div class="ib-stat-l">Elukoha vajadust</div></div>
+    <div class="ib-stat"><div class="ib-stat-n" id="s-regs">0</div><div class="ib-stat-l">Kaetud piirkondi</div></div>
+  </div>
+
+  <div class="threshold-block">
+    <div class="threshold-head">
+      <div class="threshold-head-l">EISi programmi käivitamise lävi — laenuvajadus ≥ €20M</div>
+      <div class="threshold-pct" id="tb-pct">0%</div>
+    </div>
+    <div class="threshold-track"><div class="threshold-fill" id="tb-fill" style="width:0%"></div></div>
+    <div class="threshold-labels"><span>€0</span><span>Siht: €20 000 000</span></div>
+  </div>
+
+  <div class="ib-body">
+    <div class="form-card">
+      <div class="form-card-title">Registreeri huvi</div>
+      <div class="toast" id="toast">✓ Huvi edukalt registreeritud!</div>
+
+      <div class="form-group">
+        <label class="form-label">Osapoole tüüp</label>
+        <div class="type-grid">
+          <button class="type-btn on dev" onclick="stype('dev',this)">Arendaja</button>
+          <button class="type-btn kov"    onclick="stype('kov',this)">Omavalitsus</button>
+          <button class="type-btn emp"    onclick="stype('emp',this)">Tööandja</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Piirkond</label>
+        <select id="f-reg" class="form-input">
+          <option value="">— vali piirkond —</option>
+          <option>Narva</option><option>Jõhvi</option><option>Kohtla-Järve</option>
+          <option>Sillamäe</option><option>Rakvere</option><option>Kärdla</option>
+          <option>Haapsalu</option><option>Rapla</option><option>Paide</option>
+          <option>Türi</option><option>Jõgeva</option><option>Viljandi</option>
+          <option>Kuressaare</option><option>Valga</option><option>Võru</option><option>Põlva</option>
+        </select>
+      </div>
+
+      <div id="f-dev">
+        <div class="form-group">
+          <label class="form-label">Hinnanguline laenuvajadus (€)</label>
+          <input type="number" id="f-ln" class="form-input" min="100000" step="50000" value="3000000" placeholder="nt 3 000 000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Planeeritavaid kortereid</label>
+          <input type="number" id="f-apts" class="form-input" min="10" value="40" placeholder="nt 40">
+        </div>
+      </div>
+      <div id="f-kov" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Arenduseks sobiv maa (m²)</label>
+          <input type="number" id="f-land" class="form-input" min="500" value="5000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Maa aadress</label>
+          <input type="text" id="f-addr" class="form-input" placeholder="nt Männimäe 12, Viljandi">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hinnanguline laenuvajadus (€) — vabatahtlik</label>
+          <input type="number" id="f-kovln" class="form-input" min="0" step="50000" value="0">
+        </div>
+      </div>
+      <div id="f-emp" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Töötajate elukoha vajadus (korterit)</label>
+          <input type="number" id="f-units" class="form-input" min="5" value="30">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Organisatsiooni nimi <span style="color:var(--red)">*</span></label>
+        <input type="text" id="f-org" class="form-input" placeholder="nt Tartu Kinnisvaragrupp OÜ" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kontaktisik <span style="color:var(--red)">*</span></label>
+        <input type="text" id="f-contact" class="form-input" placeholder="Eesnimi Perekonnanimi" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-post <span style="color:var(--red)">*</span></label>
+        <input type="email" id="f-email" class="form-input" placeholder="nimi@ettevote.ee" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kommentaar — vabatahtlik</label>
+        <input type="text" id="f-note" class="form-input" placeholder="Lühike lisainfo…" maxlength="120">
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">
+        Kontaktandmeid kasutatakse ainult EISi kaaslaenu meetme ettevalmistamiseks (GDPR § 6(1)(a)).
+      </div>
+      <button class="submit-btn" onclick="reg()">Registreeri huvi →</button>
+    </div>
+
+    <div class="list-card">
+      <div class="list-head">
+        <span class="list-title">Registreeritud huvid</span>
+        <span class="list-count" id="lcnt">0 kirjet</span>
+      </div>
+      <div class="list-scroll" id="lst">
+        <div style="font-size:12px;color:var(--text3);text-align:center;padding:30px 0">Laen andmeid…</div>
+      </div>
+    </div>
+  </div>
+ </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!--  MAP                                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-map">
+ <div class="map-page">
+  <div class="map-header">
+    <div class="map-header-title">Tugevate Keskuste Eesti — huvi kaart</div>
+    <div class="map-header-sub">Üleriigiline planeering 2050 · Tallinn, Tartu ja Pärnu on registreerimisest välja jäetud</div>
+  </div>
+  <div class="map-legend">
+    <span><span class="ml-dot" style="background:#9B9B9B;border:2px solid #777"></span>Pealinn / piirkondlik linn (välistatud)</span>
+    <span><span class="ml-dot" style="background:var(--green)"></span>Arendaja huvi</span>
+    <span><span class="ml-dot" style="background:var(--amber)"></span>Omavalitsus / maa</span>
+    <span><span class="ml-dot" style="background:var(--blue)"></span>Tööandja vajadus</span>
+    <span><span class="ml-dot" style="background:#D3D1C7;border:1px solid #aaa"></span>Pole registreerimisi</span>
+  </div>
+  <div class="map-svg-wrap">
+    <svg id="emap" viewBox="0 0 700 440" role="img" aria-label="Eesti asustuse kaart huvi registreerimistega"></svg>
+  </div>
+  <div class="map-totals" id="map-totals"></div>
+ </div>
+</div>
+
+<!-- ── SCRIPTS ────────────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+'use strict';
+// ──────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const fE = n => { if(n==null||isNaN(n))return'—'; const a=Math.abs(n); if(a>=1e6)return'€'+(n/1e6).toFixed(2)+'M'; if(a>=1e3)return'€'+Math.round(n/1e3)+'K'; return'€'+Math.round(n); };
+const fP = n => n==null||isNaN(n)?'—':(n*100).toFixed(2)+'%';
+const ic = v => !v?'':v>=0.06?'good':v>=0.04?'ok':'bad';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// EXACT EXCEL FORMULAS
+// PPMT(rate, per, nper, pv) — matches Excel PPMT exactly (type=0, fv=0)
+// ──────────────────────────────────────────────────────────────────────────────
+function PPMT(rate, per, nper, pv) {
+  if (Math.abs(rate) < 1e-10) return -pv / nper;
+  // PMT = -pv * rate / (1 - (1+rate)^-nper)
+  const pmt = -pv * rate / (1 - Math.pow(1+rate, -nper));
+  // Balance at START of period per (after per-1 payments already made)
+  const fvBefore = pv * Math.pow(1+rate, per-1) + pmt * (Math.pow(1+rate,per-1)-1) / rate;
+  // IPMT for period per = -balance_before * rate
+  const ipmt = -fvBefore * rate;
+  return pmt - ipmt;
+}
+
+// IRR(values) — Newton-Raphson, matches Excel IRR
+function IRR(cfs, guess=0.1) {
+  let r = guess;
+  for (let i=0; i<300; i++) {
+    let f=0, df=0;
+    cfs.forEach((c, t) => {
+      const p = Math.pow(1+r, t);
+      f  += c/p;
+      df -= t*c/(p*(1+r));
+    });
+    if (Math.abs(df) < 1e-14) break;
+    const r2 = r - f/df;
+    if (!isFinite(r2)) break;
+    if (Math.abs(r2-r) < 1e-9) { r=r2; break; }
+    r = r2;
+  }
+  return isFinite(r) && r > -0.99 && r < 10 ? r : null;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// EXCEL MODEL — cell-by-cell faithful implementation of Spinnakeri mudel
+// All variable names match Excel cell addresses
+// ──────────────────────────────────────────────────────────────────────────────
+function excelModel(p) {
+  // v5: two-rate loan, three EIS toggles, 40yr horizon, investment loan from year 5
+  const C5=+(p.C5||p.D5||0.70), C6=+(p.C6||p.D6||0.085), C7=+(p.C7||p.D7||0.055);
+  const C8=+(p.C8||p.D8||20),   C10=+(p.C10||40);
+  const c13=p.c13||false, c18=p.c18||false, c23=p.c23||false;
+  const D12=0.24;
+
+  // EIS derived rates
+  const D5 = c23?0.1:(c13?0.2:C5);
+  const D6 = c13?C6-0.02:C6;
+  const D7 = c23?C7-0.005:(c18?C7-0.01:C7);
+  const D8 = c23?C8+15:C8;
+  const D10= C10;
+
+  // Area
+  const E45=+(p.E27||p.E45||0.9), E46=0.10, E47=Math.max(0,1-E45-E46), D29=2086;
+  const D31=+(p.D13||p.D31||40), D32=+(p.D14||p.D32||51.5);
+  const D33=D31*D32, D34=D33/E45;
+
+  // Costs
+  const D37=+(p.D19||p.D37||20);
+  const devCosts=+(p.devCosts||80);  // D39+D40+D41+D42 combined slider
+  const D38=D37*D29/D34;             // land per net m²
+  const D45=+(p.D45||p.D27||1700), D46=+(p.D28||p.D46||1300);
+  const D52=(D38+devCosts)/E45;      // dev cost per rentable m²
+  const D47=+(p.D47||1000);
+  const D53=(D45*E45+D46*E46+D47*E47)/E45;   // build cost per rentable m² (D50/E45)
+  const D54=D52+D53, D55=D54*D12, D56=D54+D55;  // exit value
+  const exitVal=(p.exitOverride&&p.exitOverride>0)?p.exitOverride:D56;
+
+  const D60=+(p.D42||p.D60||0.05), E60=+(p.E42||p.E60||0.5);
+  const D61=+(p.D43||p.D61||30),   D62=+(p.D44||p.D62||0.02);
+  const D63=+(p.D63||14);
+
+  const N=41;
+  const z=()=>new Array(N).fill(0);
+  const r5=z(),r6=z(),r7=z(),r8=z(),r9=z(),r10=z(),r11=z(),r12=z(),r13=z();
+  const r14=z(),r15=z(),r16=z(),r17=z(),r18=z(),r19=z(),r20=z(),r21=z();
+
+  for(let y=1;y<N;y++){
+    r5[y]=y<=4?1:r5[y-1]*(1+D62);
+    r6[y]=y<=3?0:y===4?1-E60:1-D60;
+    r9[y]=y<=D10?D63*r5[y]*12*r6[y]:0;
+    r10[y]=y<=3?0:y===4?-D61:y<=D10?r10[y-1]*(1+D62):0;
+    r11[y]=r9[y]+r10[y];
+    r12[y]=y===D10?exitVal:0;
+  }
+  r7[1]=-D52; r7[2]=-D53*0.6; r7[3]=-D53*0.4;
+  for(let y=1;y<=3;y++) r8[y]=r7[y]*D12;
+  for(let y=1;y<N;y++) r13[y]=y<=D10?r7[y]+r8[y]+r11[y]+r12[y]:0;
+  for(let y=1;y<=3;y++) r14[y]=-r13[y]*(1-D5);
+
+  // Loan balance years 1-4 → K16
+  r16[1]=r14[1]; r16[2]=r16[1]+r14[2]; r16[3]=r16[2]+r14[3]; r16[4]=r16[3];
+  const K16=r16[4];
+
+  // PPMT from year 5, nper=D8, pv=K16
+  function ppmt(rate,per,nper,pv){
+    if(Math.abs(rate)<1e-10) return -pv/nper;
+    const pmt=-pv*rate/(1-Math.pow(1+rate,-nper));
+    const bal=pv*Math.pow(1+rate,per-1)+pmt*(Math.pow(1+rate,per-1)-1)/rate;
+    return pmt-(-bal*rate);
+  }
+  for(let y=5;y<N;y++){
+    const per=y-4;
+    r15[y]=per<=D8?ppmt(D7,per,D8,K16):0;
+    r16[y]=r16[y-1]+r15[y];
+  }
+  for(let y=1;y<N;y++){
+    r17[y]=-r16[y]*(y<=4?D6:D7);
+    r18[y]=y<=4?(c13?-0.016*r16[y]:0):(c18?-0.016*r16[y]:0);
+    r19[y]=y<=D10?r13[y]+r14[y]+r15[y]+r17[y]+r18[y]:0;
+  }
+  let cum=0; for(let y=1;y<N;y++){if(y<=D10){cum+=r19[y];r20[y]=cum;}}
+
+  // Annual DSCR (row 21)
+  for(let y=5;y<N;y++){
+    const den=r15[y]+r17[y]+r18[y];
+    if(r16[y-1]>1e-6&&Math.abs(den)>1e-10) r21[y]=-r13[y]/den;
+  }
+
+  function IRR(cfs,g=0.1){
+    let r=g;
+    for(let i=0;i<500;i++){
+      let f=0,df=0;
+      for(let t=0;t<cfs.length;t++){const p=Math.pow(1+r,t);f+=cfs[t]/p;df-=t*cfs[t]/(p*(1+r));}
+      if(Math.abs(df)<1e-14) break;
+      let r2=r-f/df;
+      if(r2<-0.99||r2>10) r2=r+(f<0?0.001:-0.001);
+      if(Math.abs(r2-r)<1e-10){r=r2;break;} r=r2;
+    }
+    return(r>-0.99&&r<10)?r:null;
+  }
+
+  const H23=IRR(r13.slice(1,D10+1));
+  const H24=IRR(r19.slice(1,D10+1));
+  const H22=-Math.min(...r20.slice(1,D10+1));
+  const H27=H22*D33;
+  const dscrVals=r21.filter(v=>v>0);
+  const H25=dscrVals.length?Math.round(Math.min(...dscrVals)*10000)/10000:null;
+
+  const AV7=r7.reduce((a,v)=>a+v,0), AV8=r8.reduce((a,v)=>a+v,0);
+  const AV9=r9.slice(1,D10+1).reduce((a,v)=>a+v,0);
+  const AV10=r10.slice(1,D10+1).reduce((a,v)=>a+v,0);
+  const AV12=r12.reduce((a,v)=>a+v,0);
+  const AV17=r17.slice(1,D10+1).reduce((a,v)=>a+v,0);
+  const AV18=r18.slice(1,D10+1).reduce((a,v)=>a+v,0);
+  const AV19=r19.slice(1,D10+1).reduce((a,v)=>a+v,0);
+
+  const H29=-AV7*D33, H30=-AV8*D33, H31=-AV10*D33;
+  const H32=-(AV17+AV18)*D33, H33=AV19*D33;
+  const H34=H29+H30+H31+H32+H33;
+  const H35=AV9*D33, H36=AV12*D33, H37=H35+H36;
+  const J37=H34?( H34+H36)/H34:1;
+
+  const ch={
+    dev:D63*(H29/H34)*J37, vat:D63*(H30/H34)*J37,
+    opex:D63*(H31/H34)*J37, bank:D63*(H32/H34)*J37,
+    own:D63*(H33/H34)*J37,  exit:D63*(-H36/H34),
+    total:D63
+  };
+
+  return { H23,H24,H22,H27,D56,D33,D34,H25,H29,H30,H31,H32,H33,H34,H35,H36,H37,K16,d63:D63,ch };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INVERSE IRR — bisection method
+// "Given a target IRR, what monthly rent achieves it?"
+// ──────────────────────────────────────────────────────────────────────────────
+function rentForIRR(targetIRR, irrType, baseParams, lo=5, hi=50) {
+  const getIRR = r => {
+    const m = excelModel({...baseParams, D63:r});
+    const v = irrType==='project' ? m.H23 : m.H24;
+    return (v!=null && v>-0.99 && v<2.0) ? v : null;
+  };
+  // Scan upward to find valid lower bound (avoids spurious IRR at very low rents)
+  let iLo=getIRR(lo);
+  while(iLo===null && lo<hi-0.5){lo+=0.5;iLo=getIRR(lo);}
+  const iHi=getIRR(hi);
+  if(iLo===null||iHi===null) return null;
+  if(targetIRR<=iLo) return +lo.toFixed(2);
+  if(targetIRR>=iHi) return +hi.toFixed(2);
+  for(let i=0;i<100;i++){
+    const mid=(lo+hi)/2, iMid=getIRR(mid);
+    if(iMid===null) break;
+    if(iMid<targetIRR) lo=mid; else hi=mid;
+    if(hi-lo<0.001) break;
+  }
+  return +((lo+hi)/2).toFixed(2);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SLIDER / INPUT MANAGEMENT
+// ──────────────────────────────────────────────────────────────────────────────
+let calcMode = 1;
+
+function upd(id, suf) {
+  const v = parseFloat($('i-'+id).value);
+  let t;
+  if (suf==='%') t=(v*100).toFixed(1)+'%';
+  else if (suf==='a') t=v+'a';
+  else t=v;
+  $('v-'+id).textContent=t;
+}
+function updPct(id) { $('v-'+id).textContent=(parseFloat($('i-'+id).value)).toFixed(1)+'%'; }
+function updExit() {
+  const v=+(($('i-exit').value)||0);
+  $('v-exit').textContent=v>0?'€'+v+'/m²':'auto';
+}
+
+function gi() {
+  return {
+    C5:+$('i-eq').value, C6:+$('i-ir').value, C7:+$('i-ir2').value,
+    C8:+$('i-rp').value, C10:+$('i-pd').value,
+    c13:$('eis-c13').checked, c18:$('eis-c18').checked, c23:$('eis-c23').checked,
+    D31:+$('i-na').value, D32:+$('i-as').value,
+    D37:+$('i-lp').value, devCosts:+$('i-dc').value,
+    D45:+$('i-bc').value, D46:+$('i-ca').value, D47:+$('i-pk').value,
+    E45:+$('i-e27').value,
+    D60:+$('i-vr').value, E60:+$('i-ev').value,
+    D61:+$('i-op').value, D62:+$('i-ri').value,
+    D63:+$('i-mr').value,
+    exitOverride:+(($('i-exit').value)||0),
+  };
+}
+
+function onEIS(){
+  // Each EIS measure independently updates sliders to reflect its effects
+  const c13=$('eis-c13').checked, c18=$('eis-c18').checked, c23=$('eis-c23').checked;
+  // D5 priority: C23>C13>base
+  if(c23){ $('i-eq').value=0.10; }
+  else if(c13){ $('i-eq').value=0.20; }
+  else{ $('i-eq').value=0.70; }
+  upd('eq','%');
+  // D6: C13 reduces dev rate by 2pp
+  $('i-ir').value=c13?0.065:0.085; upd('ir','%');
+  // D7: C23 reduces inv rate by 0.5pp, C18 by 1pp
+  $('i-ir2').value=c23?0.05:(c18?0.045:0.055); upd('ir2','%');
+  // D8: C23 extends repayment by 15yr
+  $('i-rp').value=c23?35:20; upd('rp','a');
+  go();
+}
+
+function setMode(m){
+  calcMode=m;
+  $('m1').classList.toggle('on',m===1); $('m2').classList.toggle('on',m===2);
+  $('rent-block').style.display=m===1?'block':'none';
+  $('irr-block').style.display=m===2?'block':'none';
+  go();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CHART
+// ──────────────────────────────────────────────────────────────────────────────
+const SEG_COLORS = ['#1A7A54','#B8DFD4','#9B9891','#C8860A','#1E5FA8','#D3D1C7'];
+const SEG_LABELS = ['Arenduskulu','Käibemaks','Halduskulu','Panga tootlus','Omaniku tootlus','Hoone exit (−)'];
+let rcInst = null;
+
+function drawChart(ch) {
+  // Stacked bar
+  const sbar=$('sbar'); sbar.innerHTML='';
+  const sleg=$('sleg'); sleg.innerHTML='';
+  const vals=[ch.dev,ch.vat,ch.opex,ch.bank,ch.own,Math.abs(ch.exit)];
+  vals.forEach((v,i)=>{
+    const s=document.createElement('div'); s.className='stack-seg';
+    s.style.cssText=`width:${Math.max(0,v/ch.total*100).toFixed(1)}%;background:${SEG_COLORS[i]};${i===5?'opacity:.5':''}`;
+    sbar.appendChild(s);
+    const li=document.createElement('span'); li.className='stack-legend-item';
+    li.innerHTML=`<span class="stack-dot" style="background:${SEG_COLORS[i]};${i===5?'opacity:.5':''}"></span>${SEG_LABELS[i]} <strong style="color:var(--text);font-family:var(--mono);margin-left:2px">€${v.toFixed(2)}</strong>`;
+    sleg.appendChild(li);
+  });
+  // Bar chart
+  const ctx=$('rc'); if(!ctx)return;
+  if(rcInst)rcInst.destroy();
+  rcInst=new Chart(ctx,{
+    type:'bar',
+    data:{labels:SEG_LABELS,datasets:[{data:vals,backgroundColor:SEG_COLORS.map((c,i)=>i===5?c+'88':c),borderWidth:0}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`€${c.parsed.x.toFixed(2)}/m²/kuu`}}},
+      scales:{x:{ticks:{callback:v=>'€'+v.toFixed(1),font:{size:10}},title:{display:true,text:'€/m²/kuu',font:{size:9}}},y:{ticks:{font:{size:10}}}}}
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SCENARIO COMPARE
+// ──────────────────────────────────────────────────────────────────────────────
+function drawScen(base, curM) {
+  const scens=[
+    {lbl:'Baasstsenaarium', desc:'70% OK · 8.5%/5.5% · 20a',
+     p:{...base,C5:.7,C6:.085,C7:.055,C8:20,c13:false,c18:false,c23:false}, hi:false},
+    {lbl:'Kõik EIS meetmed', desc:'10% OK · 6.5%/5% · 35a',
+     p:{...base,C5:.7,C6:.085,C7:.055,C8:20,c13:true,c18:true,c23:true}, hi:true},
+    {lbl:'Sinu stsenaarium',
+     desc:`${((base.C5||base.D5||0.7)*100).toFixed(0)}% OK · ${((base.C6||base.D6||0.085)*100).toFixed(1)}%/`+
+          `${((base.C7||base.D7||0.055)*100).toFixed(1)}%`, p:base, hi:false},
+  ];
+  const g=$('scen-row'); g.innerHTML='';
+  scens.forEach(s=>{
+    const m = s.p===base ? curM : excelModel(s.p);
+    const el=document.createElement('div');
+    el.className='scen-card'+(s.hi?' highlight':'');
+    el.innerHTML=`<div class="scen-name">${s.lbl}</div><div class="scen-desc">${s.desc}</div>`;
+    [['Projekti IRR',fP(m.H23),ic(m.H23)],['OK IRR',fP(m.H24),ic(m.H24)],
+     ['Kuuüür/m²','€'+(m.d63||m.d45||14).toFixed(1)+'/m²',''],
+     ['Max omakapital',fE(m.H27),''],['Maksumus/m²','€'+Math.round(m.D56),'']
+    ].forEach(([l,v,cls])=>{
+      const r=document.createElement('div'); r.className='scen-kv-row';
+      r.innerHTML=`<span class="scen-kv-l">${l}</span><span class="scen-kv-v ${cls}">${v}</span>`;
+      el.appendChild(r);
+    });
+    g.appendChild(el);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MAIN GO()
+// ──────────────────────────────────────────────────────────────────────────────
+function go() {
+  const p = gi();
+  let displayRent = p.D63;
+
+  if (calcMode===2) {
+    const tE = parseFloat($('i-eirr').value)/100;
+    const rE = rentForIRR(tE,'equity',p);
+    // Show required rent
+    $('rent-eirr').textContent = rE!=null?`€${rE.toFixed(2)}/m²`:'—';
+    // Show what project IRR results from that rent
+    if (rE!=null) {
+      const mCheck = excelModel({...p, D63:rE});
+      $('rent-pirr').textContent = mCheck.H23!=null?(mCheck.H23*100).toFixed(2)+'%':'—';
+    } else { $('rent-pirr').textContent='—'; }
+    displayRent = rE!=null ? rE : p.D45;
+  }
+
+  const m = excelModel({...p, D63:displayRent});
+
+  // KPIs
+  const iEl=$('r-irr'); iEl.textContent=fP(m.H23); iEl.className='kpi-value '+ic(m.H23);
+  const eEl=$('r-eirr');eEl.textContent=fP(m.H24); eEl.className='kpi-value '+ic(m.H24);
+  $('r-mr').textContent='€'+displayRent.toFixed(2)+'/m²';
+  $('r-eq').textContent=fE(m.H27);
+  $('r-eq2').textContent='€'+m.H22.toFixed(0)+'/m² · H22';
+  $('r-sqm').textContent='€'+Math.round(m.D56)+'/m²';
+  $('r-area').textContent=Math.round(m.D33)+' m²';
+  $('r-area2').textContent='Netopind: '+Math.round(m.D34)+' m²';
+
+  // DSCR
+  const dscrEl=$('r-dscr'), dscrBadge=$('r-dscr-badge');
+  if(m.H25!=null){
+    dscrEl.textContent=m.H25.toFixed(2)+'x';
+    if(m.H25>=1.30){dscrEl.style.color='var(--green)';dscrBadge.textContent='OK';dscrBadge.style.cssText='font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;background:var(--green-l);color:var(--green);display:inline';}
+    else if(m.H25>=1.20){dscrEl.style.color='var(--amber)';dscrBadge.textContent='PIIRI PEAL';dscrBadge.style.cssText='font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;background:var(--amber-l);color:var(--amber);display:inline';}
+    else{dscrEl.style.color='var(--red)';dscrBadge.textContent='PANGALE EI SOBI';dscrBadge.style.cssText='font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;background:var(--red-l);color:var(--red);display:inline';}
+  } else { dscrEl.textContent='—'; dscrEl.style.color='var(--text)'; dscrBadge.style.display='none'; }
+
+  // Cost table
+  $('t-d').textContent=fE(m.H28); $('t-v').textContent=fE(m.H29);
+  $('t-o').textContent=fE(m.H30); $('t-b').textContent=fE(m.H31);
+  $('t-ow').textContent=fE(m.H32);$('t-tot').textContent=fE(m.H33);
+  $('t-ri').textContent=fE(m.H34);$('t-ex').textContent=fE(m.H35);
+
+  drawChart(m.ch);
+  drawScen(p, m);
+
+  // Try backend API
+  tryAPI(p, displayRent);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// BACKEND API (optional — works without it)
+// ──────────────────────────────────────────────────────────────────────────────
+const API = ''  // relative — works locally AND on Render;
+let apiOk = false;
+
+// Map UI slider fields to Python API input names
+function buildPayload(p, rent) {
+  return {
+    input_equity_share:          p.C5||p.D5||0.7,
+    input_loan_interest:         p.D6,
+    input_payment_schedule:      p.D7,
+    input_project_duration:      p.D8,
+    input_VAT:                   p.D12,
+    input_apartments:            p.D13,
+    input_apartment_area:        p.D14,
+    input_site_price:            p.D19,
+    input_design:                p.devCosts * 0.73,  // approximate split; full split not in UI
+    input_connections:           0,
+    input_project_management:    p.devCosts * 0.27,
+    input_sales_customers:       0,
+    input_apartment_cost:        p.D45||p.D27||1700,
+    input_apartmentarea_share:   p.E45||p.E27||0.9,
+    input_mainarea_cost:         p.D46||p.D28||1300,
+    input_mainarea_share:        0.10,
+    input_parkingarea_cost:      p.D47||1000,
+    input_exit_override:         p.exitOverride||0,
+    input_dev_loan_rate:         p.C6||p.D6||0.085,
+    input_inv_loan_rate:         p.C7||p.D7||0.055,
+    input_inv_loan_term:         p.C8||20,
+    input_project_horizon:       p.C10||40,
+    input_eis_c13:               p.c13?'Jah':'Ei',
+    input_eis_c18:               p.c18?'Jah':'Ei',
+    input_eis_c23:               p.c23?'Jah':'Ei',
+    input_parkingarea_cost:      1000,
+    input_vacancy_fromNOI:       p.D42,
+    input_firstyearvacancy_fromNOI: p.E42,
+    input_maintenance_cost:      p.D61||p.D43||30,
+    input_inflation:             p.D62||p.D44||0.02,
+    input_rent:                  rent, input_project_horizon: p.C10||40,
+    input_yes_no:                p.eis ? 'Jah' : 'Ei',
+  };
+}
+
+async function tryAPI(p, rent) {
+  try {
+    const payload = buildPayload(p, rent);
+    const res = await fetch(API+'/calculate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error();
+    const data = await res.json();
+    const o = data.outputs;
+    // Override with exact Python-engine values
+    if(o.H23 != null) {
+      $('r-irr').textContent=fP(o.H23);  $('r-irr').className='kpi-value '+ic(o.H23);
+      $('r-eirr').textContent=fP(o.H24); $('r-eirr').className='kpi-value '+ic(o.H24);
+      $('r-eq').textContent=fE(o.H27);   $('r-sqm').textContent='€'+Math.round(o.D56)+'/m²';
+    }
+    if(!apiOk){ apiOk=true; $('api-dot').className='api-dot ok'; $('api-txt').textContent='Python mootor OK'; }
+  } catch(e) {
+    if(apiOk){ apiOk=false; $('api-dot').className='api-dot err'; $('api-txt').textContent='server ei vasta'; }
+    else { $('api-dot').className='api-dot'; $('api-txt').textContent='töötab offline-režiimis'; }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INTEREST BOARD
+// ──────────────────────────────────────────────────────────────────────────────
+let ctype='dev';
+const DEMO_ENTRIES=[
+  {type:'dev',region:'Rakvere',loan:3200000,apts:45,units:0,land:0,addr:'',note:'Planeerime 45-korterilist kortermaja, krunt olemas',ts:'2025-04-12T10:00:00Z',demo:true},
+  {type:'kov',region:'Viljandi',loan:500000,apts:0,units:0,land:8500,addr:'Männimäe 12, Viljandi',note:'KOV on valmis maad andma',ts:'2025-04-18T14:00:00Z',demo:true},
+  {type:'emp',region:'Jõhvi',loan:0,apts:0,units:60,land:0,addr:'',note:'Tootmisettevõte — 60 töötajale eluaset vaja',ts:'2025-05-01T09:00:00Z',demo:true},
+];
+
+function stype(t,btn){
+  ctype=t;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  ['dev','kov','emp'].forEach(id=>$('f-'+id).style.display=id===t?'block':'none');
+}
+
+async function reg(){
+  const r=$('f-reg').value; if(!r)return;
+  const org=$('f-org').value.trim();
+  const contact=$('f-contact').value.trim();
+  const email=$('f-email').value.trim();
+  if(!org||!contact||!email){alert('Palun täida organisatsioon, kontaktisik ja e-post.');return;}
+  const e={
+    type:ctype, region:r, org, contact, email,
+    loan:ctype==='dev'?+$('f-ln').value:ctype==='kov'?(+$('f-kovln').value||0):0,
+    apts:ctype==='dev'?+$('f-apts').value:0,
+    units:ctype==='emp'?+$('f-units').value:0,
+    land:ctype==='kov'?+$('f-land').value:0,
+    addr:ctype==='kov'?$('f-addr').value:'',
+    note:$('f-note').value, ts:new Date().toISOString(), demo:false,
+  };
+  try{ await window.storage.set('reg:'+Date.now(),JSON.stringify(e)); }catch(x){}
+  const t=$('toast'); t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),3000);
+  $('f-reg').value=''; $('f-org').value=''; $('f-contact').value=''; $('f-email').value=''; $('f-note').value='';
+  loadIB();
+}
+
+async function loadIB(){
+  let entries=[...DEMO_ENTRIES];
+  try{
+    const ks=await window.storage.list('reg:');
+    for(const k of(ks.keys||[])){
+      try{const r=await window.storage.get(k);if(r)entries.push(JSON.parse(r.value));}catch(e){}
+    }
+  }catch(x){}
+  entries.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  window._ibData=entries;
+  renderStats(entries);
+  renderList(entries);
+  if($('pg-map').classList.contains('on')) renderMap(entries);
+}
+
+function renderStats(entries){
+  const tl=entries.reduce((s,e)=>s+e.loan,0);
+  const tu=entries.reduce((s,e)=>s+e.units,0);
+  const regs=new Set(entries.map(e=>e.region)).size;
+  $('s-loan').textContent=fE(tl); $('s-cnt').textContent=entries.length;
+  $('s-units').textContent=tu; $('s-regs').textContent=regs;
+  const pct=Math.min(100,Math.round(tl/20000000*100));
+  const f=$('tb-fill');
+  f.style.width=pct+'%';
+  f.className='threshold-fill'+(pct>=70?pct>=100?'':'near':'');
+  const p=$('tb-pct');
+  p.textContent=pct+'%';
+  p.style.color=pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--green)';
+}
+
+function renderList(entries){
+  $('lcnt').textContent=entries.length+' kirjet';
+  const TL={dev:'Arendaja',kov:'Omavalitsus',emp:'Tööandja'};
+  if(!entries.length){
+    $('lst').innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:30px 0">Pole veel registreerimisi.</div>';
+    return;
+  }
+  $('lst').innerHTML=entries.map(e=>{
+    const d=new Date(e.ts).toLocaleDateString('et-EE',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    let detail='';
+    if(e.type==='dev'&&e.loan)     detail=fE(e.loan)+(e.apts?' · '+e.apts+' korterit':'');
+    else if(e.type==='kov'&&e.land)detail=e.land+' m²'+(e.addr?' · '+e.addr:'')+(e.loan?' · '+fE(e.loan):'');
+    else if(e.type==='emp'&&e.units)detail=e.units+' elukoha vajadust';
+    const contactLine=e.demo?'':(e.org?`<div class="reg-note" style="color:var(--text2)">${e.org}${e.contact?' · '+e.contact:''}</div>`:'');
+    return`<div class="reg-item">
+      <div class="reg-top">
+        <div>
+          <span class="reg-badge ${e.type}${e.demo?' demo':''}">${TL[e.type]}${e.demo?' ·demo':''}</span>
+          <span class="reg-region">${e.region}</span>
+        </div>
+        <span class="reg-date">${d}</span>
+      </div>
+      <div class="reg-detail">${detail}</div>
+      ${contactLine}
+      ${e.note?`<div class="reg-note">${e.note}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MAP — Tugevate Keskuste Eesti (national plan 2050)
+// ──────────────────────────────────────────────────────────────────────────────
+const CITIES = {
+  'Tallinn':     {lon:24.745,lat:59.437,tier:'capital', excluded:true },
+  'Tartu':       {lon:26.728,lat:58.378,tier:'regional',excluded:true },
+  'Pärnu':       {lon:24.498,lat:58.385,tier:'regional',excluded:true },
+  'Narva':       {lon:28.177,lat:59.377,tier:'regional',excluded:false},
+  'Jõhvi':       {lon:27.420,lat:59.355,tier:'district',excluded:false},
+  'Kohtla-Järve':{lon:27.270,lat:59.400,tier:'district',excluded:false},
+  'Sillamäe':    {lon:27.762,lat:59.399,tier:'district',excluded:false},
+  'Rakvere':     {lon:26.355,lat:59.347,tier:'district',excluded:false},
+  'Kärdla':      {lon:22.741,lat:58.991,tier:'district',excluded:false},
+  'Haapsalu':    {lon:23.541,lat:58.944,tier:'district',excluded:false},
+  'Rapla':       {lon:24.793,lat:59.014,tier:'district',excluded:false},
+  'Paide':       {lon:25.557,lat:58.885,tier:'district',excluded:false},
+  'Türi':        {lon:25.428,lat:58.807,tier:'district',excluded:false},
+  'Jõgeva':      {lon:26.394,lat:58.745,tier:'district',excluded:false},
+  'Viljandi':    {lon:25.601,lat:58.363,tier:'district',excluded:false},
+  'Kuressaare':  {lon:22.495,lat:58.248,tier:'district',excluded:false},
+  'Valga':       {lon:26.048,lat:57.776,tier:'district',excluded:false},
+  'Võru':        {lon:27.015,lat:57.836,tier:'district',excluded:false},
+  'Põlva':       {lon:27.062,lat:58.065,tier:'district',excluded:false},
+};
+const CONNECTIONS=[
+  ['Tallinn','Rakvere'],['Tallinn','Jõhvi'],['Tallinn','Tartu'],['Tallinn','Pärnu'],
+  ['Tallinn','Rapla'],['Tallinn','Haapsalu'],['Jõhvi','Narva'],['Jõhvi','Kohtla-Järve'],
+  ['Kohtla-Järve','Sillamäe'],['Rakvere','Jõgeva'],['Tartu','Jõgeva'],['Tartu','Viljandi'],
+  ['Tartu','Võru'],['Tartu','Valga'],['Võru','Põlva'],['Võru','Valga'],
+  ['Pärnu','Viljandi'],['Pärnu','Valga'],['Rapla','Paide'],['Paide','Türi'],
+  ['Paide','Jõgeva'],['Türi','Viljandi'],['Haapsalu','Kärdla'],['Pärnu','Kuressaare'],
+];
+const TYPE_COLOR={dev:'var(--green)',kov:'var(--amber)',emp:'var(--blue)'};
+const TYPE_COLOR_HEX={dev:'#1A7A54',kov:'#9B6D12',emp:'#1E5FA8'};
+let mapBuilt=false;
+
+async function renderMap(entries){
+  const SVG=$('emap'); const W=700,H=440;
+  if(!mapBuilt){
+    SVG.innerHTML='<text x="50%" y="50%" text-anchor="middle" font-size="13" fill="#999">Laen kaarti…</text>';
+    try{
+      const world=await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json');
+      mapBuilt=true;
+      SVG.innerHTML='';
+      const proj=d3.geoMercator().center([25.2,58.75]).scale(4200).translate([W/2,H/2]);
+      const pathFn=d3.geoPath(proj);
+      const countries=topojson.feature(world,world.objects.countries);
+      const ns='http://www.w3.org/2000/svg';
+      // Sea background
+      const sea=document.createElementNS(ns,'rect');
+      sea.setAttribute('width',W);sea.setAttribute('height',H);
+      sea.setAttribute('fill','#C8DCF0');SVG.appendChild(sea);
+      // Neighbour countries
+      [246,440,428,643].forEach(id=>{
+        const f=countries.features.find(f=>+f.id===id);
+        if(!f)return;
+        const p=document.createElementNS(ns,'path');
+        p.setAttribute('d',pathFn(f));p.setAttribute('fill','#E8E6DE');p.setAttribute('stroke','#C8C4BA');p.setAttribute('stroke-width','1');
+        SVG.appendChild(p);
+      });
+      // Estonia — white fill, blue border
+      const est=countries.features.find(f=>+f.id===233);
+      if(est){
+        const p=document.createElementNS(ns,'path');
+        p.setAttribute('d',pathFn(est));p.setAttribute('fill','#FFFFFF');
+        p.setAttribute('stroke','#6B9EC8');p.setAttribute('stroke-width','1.5');
+        SVG.appendChild(p);
+      }
+      window._mapProj=proj; window._mapNS=ns;
+    }catch(e){
+      SVG.innerHTML='<text x="50%" y="50%" text-anchor="middle" font-size="12" fill="#999">Kaardi laadimine ebaõnnestus</text>';
+      return;
+    }
+  }
+
+  // Remove old overlays
+  SVG.querySelectorAll('.ov').forEach(el=>el.remove());
+  const proj=window._mapProj; const ns=window._mapNS;
+  if(!proj||!ns)return;
+
+  // Build city index
+  const byCity={};
+  entries.forEach(e=>{ if(CITIES[e.region]){ byCity[e.region]=(byCity[e.region]||[]).concat(e); }});
+
+  // Draw connections (dashed, from national plan image)
+  CONNECTIONS.forEach(([a,b])=>{
+    const ca=CITIES[a],cb=CITIES[b]; if(!ca||!cb)return;
+    const [ax,ay]=proj([ca.lon,ca.lat]);
+    const [bx,by]=proj([cb.lon,cb.lat]);
+    const l=document.createElementNS(ns,'line');
+    l.setAttribute('x1',ax);l.setAttribute('y1',ay);
+    l.setAttribute('x2',bx);l.setAttribute('y2',by);
+    l.setAttribute('stroke','#94B8D4');l.setAttribute('stroke-width','1.2');
+    l.setAttribute('stroke-dasharray','5 4');l.setAttribute('opacity','.7');
+    l.classList.add('ov'); SVG.appendChild(l);
+  });
+
+  // Draw city markers
+  Object.entries(CITIES).forEach(([name,c])=>{
+    const [cx,cy]=proj([c.lon,c.lat]);
+    const regs=byCity[name]||[];
+    const totalLoan=regs.reduce((s,e)=>s+e.loan,0);
+    const totalUnits=regs.reduce((s,e)=>s+e.units,0);
+    const hasData=regs.length>0;
+    const baseR=c.tier==='capital'?10:c.tier==='regional'?8:6;
+    const r=hasData&&!c.excluded?baseR+Math.min(regs.length*2,8):baseR;
+    const g=document.createElementNS(ns,'g'); g.classList.add('ov');
+
+    if(c.excluded){
+      // Grey out — capital gets double ring
+      if(c.tier==='capital'){
+        const outer=document.createElementNS(ns,'circle');
+        outer.setAttribute('cx',cx);outer.setAttribute('cy',cy);outer.setAttribute('r',r+5);
+        outer.setAttribute('fill','none');outer.setAttribute('stroke','#9B9B9B');
+        outer.setAttribute('stroke-width','1.5');outer.setAttribute('stroke-dasharray','3 3');
+        g.appendChild(outer);
+      }
+      const circle=document.createElementNS(ns,'circle');
+      circle.setAttribute('cx',cx);circle.setAttribute('cy',cy);circle.setAttribute('r',r);
+      circle.setAttribute('fill','#9B9B9B');circle.setAttribute('fill-opacity','.45');
+      circle.setAttribute('stroke','#777');circle.setAttribute('stroke-width','1.5');
+      g.appendChild(circle);
+    } else {
+      // Active city
+      const dominantType = regs.length>0 ? regs[regs.length-1].type : null;
+      const fillCol=dominantType?TYPE_COLOR_HEX[dominantType]:'#D3D1C7';
+      const strokeCol=dominantType?TYPE_COLOR_HEX[dominantType]:'#aaa';
+
+      // Pulsing halo for cities with data
+      if(hasData){
+        const halo=document.createElementNS(ns,'circle');
+        halo.setAttribute('cx',cx);halo.setAttribute('cy',cy);halo.setAttribute('r',r+5);
+        halo.setAttribute('fill',fillCol);halo.setAttribute('fill-opacity','.15');
+        halo.setAttribute('stroke','none'); g.appendChild(halo);
+      }
+      const circle=document.createElementNS(ns,'circle');
+      circle.setAttribute('cx',cx);circle.setAttribute('cy',cy);circle.setAttribute('r',r);
+      circle.setAttribute('fill',fillCol);circle.setAttribute('fill-opacity',hasData?.85:.45);
+      circle.setAttribute('stroke',strokeCol);circle.setAttribute('stroke-width',hasData?'2':'1');
+      g.appendChild(circle);
+
+      // Loan / units label
+      if(totalLoan>0){
+        const bg=document.createElementNS(ns,'rect');
+        bg.setAttribute('x',cx+r+2);bg.setAttribute('y',cy-10);
+        bg.setAttribute('width',48);bg.setAttribute('height',13);
+        bg.setAttribute('rx','3');bg.setAttribute('fill','rgba(255,255,255,.85)');
+        g.appendChild(bg);
+        const lt=document.createElementNS(ns,'text');
+        lt.setAttribute('x',cx+r+6);lt.setAttribute('y',cy);
+        lt.setAttribute('font-size','9');lt.setAttribute('fill',TYPE_COLOR_HEX[dominantType]||'#333');
+        lt.setAttribute('font-weight','700');lt.setAttribute('font-family','DM Mono,monospace');
+        lt.textContent=fE(totalLoan);
+        g.appendChild(lt);
+      } else if(totalUnits>0){
+        const bg=document.createElementNS(ns,'rect');
+        bg.setAttribute('x',cx+r+2);bg.setAttribute('y',cy-10);
+        bg.setAttribute('width',38);bg.setAttribute('height',13);
+        bg.setAttribute('rx','3');bg.setAttribute('fill','rgba(255,255,255,.85)');
+        g.appendChild(bg);
+        const lt=document.createElementNS(ns,'text');
+        lt.setAttribute('x',cx+r+6);lt.setAttribute('y',cy);
+        lt.setAttribute('font-size','9');lt.setAttribute('fill',TYPE_COLOR_HEX.emp);
+        lt.setAttribute('font-weight','700');lt.setAttribute('font-family','DM Mono,monospace');
+        lt.textContent=totalUnits+' el.';
+        g.appendChild(lt);
+      }
+    }
+
+    // City name label
+    const lbl=document.createElementNS(ns,'text');
+    const fontSize=c.tier==='capital'?12:c.tier==='regional'?11:9;
+    const fontWeight=c.tier==='capital'||c.tier==='regional'?'700':'400';
+    lbl.setAttribute('x',cx); lbl.setAttribute('y',cy+r+11);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('font-size',fontSize);lbl.setAttribute('font-weight',fontWeight);
+    lbl.setAttribute('fill',c.excluded?'#888':'#1A1A18');
+    lbl.setAttribute('font-family','Syne,sans-serif');
+    lbl.textContent=name.toUpperCase();
+    g.appendChild(lbl);
+    SVG.appendChild(g);
+  });
+
+  // Totals bar
+  const allLoan=entries.reduce((s,e)=>s+e.loan,0);
+  const allUnits=entries.reduce((s,e)=>s+e.units,0);
+  const pct=Math.min(100,Math.round(allLoan/20000000*100));
+  $('map-totals').innerHTML=`
+    <span>Laenuvajadus kokku: <strong>${fE(allLoan)}</strong></span>
+    <span>·</span>
+    <span>Elukoha vajadus: <strong>${allUnits} korterit</strong></span>
+    <span>·</span>
+    <span>EISi käivitamise lävi: <strong style="color:${pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--text)'}">${pct}% täidetud</strong></span>
+  `;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TAB SWITCH
+// ──────────────────────────────────────────────────────────────────────────────
+function sw(t){
+  ['calc','ib','map','miks'].forEach(id=>{const el=$('pg-'+id);if(el)el.classList.remove('on');});
+  document.querySelectorAll('.hnav').forEach((b,i)=>b.classList.toggle('on',['calc','ib','map'][i]===t));
+  $('pg-'+t).classList.add('on');
+  if(t==='ib') loadIB();
+  if(t==='map') loadIB().then(()=>renderMap(window._ibData||DEMO_ENTRIES));
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+go();
+loadIB();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!--  MIKS?                                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="pg" id="pg-miks">
+  <div class="miks-layout">
+
+    <div class="miks-hero">
+      <div class="miks-hero-label">SPINNAKER</div>
+      <h1 class="miks-hero-title">Miks Eestis on<br>uute üürikorterite<br>kriis?</h1>
+      <p class="miks-hero-sub">Ja mida saab teha, et see muutuda saaks.</p>
+    </div>
+
+    <div class="miks-cards">
+
+      <div class="miks-card">
+        <div class="miks-card-num">01</div>
+        <div class="miks-card-icon">🏙️</div>
+        <h2 class="miks-card-title">Mis on projekti eesmärk?</h2>
+        <p class="miks-card-body">Tuvastada ja leevendada <strong>turutõrge</strong>, mis takistab uute kvaliteetsete eluasemete rajamist piirkonnakeskustesse Eestis.</p>
+        <p class="miks-card-body">Kvaliteetsete kodude puudumine pidurdab <strong>regionaalset arengut, tööjõu mobiilsust</strong> ja piirkondade atraktiivsust noortele. See pidurdab investeerimist ja majanduskasvu ning võimendab sotsiaalmajanduslikku kihistumist suurlinnade ja väiksemate keskuste vahel.</p>
+        <div class="miks-stat-row">
+          <div class="miks-stat"><span class="miks-stat-n">15+</span><span class="miks-stat-l">piirkonnakeskust</span></div>
+          <div class="miks-stat"><span class="miks-stat-n">↓</span><span class="miks-stat-l">rahvastik kahaneb</span></div>
+          <div class="miks-stat"><span class="miks-stat-n">0</span><span class="miks-stat-l">uut üürimaja</span></div>
+        </div>
+      </div>
+
+      <div class="miks-card">
+        <div class="miks-card-num">02</div>
+        <div class="miks-card-icon">🔑</div>
+        <h2 class="miks-card-title">Miks üürimajad?</h2>
+        <p class="miks-card-body">Puuduliku turuga piirkondades on <strong>uute müügikorterite turg praktiliselt võimatu</strong> — ehitushind on kinnisvaraväärtusest oluliselt kõrgem ja tekitab ostjale ebamõistlikke riske.</p>
+        <p class="miks-card-body">Üürihindade vahe on oluliselt väiksem. Üürimaja võimaldab pakkuda kvaliteetset elamispinda ilma, et ostja peaks võtma kogu kinnisvararisiki endale.</p>
+        <div class="miks-compare">
+          <div class="miks-compare-col bad">
+            <div class="miks-compare-head">Müügikorter</div>
+            <div class="miks-compare-item">Ehitushind &gt; turuväärtus</div>
+            <div class="miks-compare-item">Ostja kannab riski</div>
+            <div class="miks-compare-item">Ei tööta väljaspool Tallinnat</div>
+          </div>
+          <div class="miks-compare-col good">
+            <div class="miks-compare-head">Üürimaja</div>
+            <div class="miks-compare-item">Üüritootlus katab kulu</div>
+            <div class="miks-compare-item">Pikaajaline stabiilsus</div>
+            <div class="miks-compare-item">Sobib regionaalsetesse keskustesse</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="miks-card">
+        <div class="miks-card-num">03</div>
+        <div class="miks-card-icon">💡</div>
+        <h2 class="miks-card-title">Miks see veebileht?</h2>
+        <p class="miks-card-body">Soovime aru saada, <strong>kas idee toimib</strong> — kas ärimudelil on potentsiaali ja kas nõudlus on piisav selleks, et käivitada vastav riigi tugiprogramm.</p>
+        <p class="miks-card-body">Keskkond valmis <strong>Riigikantselei käivitatud innovatsiooniprogrammis Spinnaker</strong>. Kalkulaator näitab, millal projekt muutub elujõuliseks — ja mida EIS saaks teha, et see kiiremini toimuks.</p>
+        <div class="miks-cta-row">
+          <button class="miks-cta" onclick="sw('calc')">→ Proovi kalkulaatorit</button>
+          <button class="miks-cta secondary" onclick="sw('ib')">→ Registreeri huvi</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="miks-footer">
+      Spinnaker · Riigikantselei innovatsiooniprogramm · 2025
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
